@@ -4,6 +4,7 @@ using FluentMigrator.Runner;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.OpenApi.Models;
 using SimbirGo.Models.Base;
 using SimbirGo.Repositories;
 using SimbirGo.Repositories.Interfaces;
@@ -76,6 +77,35 @@ builder.Services
     .BuildServiceProvider(false);
 
 // Running migrations
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("documentName", new OpenApiInfo() { Title = "My API", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 1safsfsdfdfd\"",
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
+
 var app = builder.Build();
 using var serviceProvider = app.Services.CreateScope();
 var services = serviceProvider.ServiceProvider;
@@ -86,7 +116,10 @@ runner.MigrateUp();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/documentName/swagger.json", "My API V1");
+    });
 }
 
 // Adding authentication and authorization to the request pipeline
